@@ -7,8 +7,8 @@
             ref="scroll"
             :probe-type="3"
             @scroll="contentScroll"
-    :pull-up-load="true"
-    @pullingUp="loadMore">
+            :pull-up-load="true">
+      <!--@pullingUp="loadMore"-->
       <home-swiper :banners="banners"></home-swiper>
       <recommend-view :recommends="recommends"></recommend-view>
       <feature-view></feature-view>
@@ -75,6 +75,13 @@ export default {
     this.getHomeGoods('new')
     this.getHomeGoods('sell')
   },
+  mounted() {
+    //3.监听item中图片加载完成
+    this.$bus.$on('itemImageLoad', () => {
+      console.log('---');
+      this.$refs.scroll.refresh()
+    })
+  },
   methods: {
     /*事件监听相关的方法*/
     tabClick(index) {
@@ -100,12 +107,12 @@ export default {
       //console.log(position);
       this.isShowBackTop = (-position.y) > 1000
     },
-    loadMore(){
+    /*loadMore() {
       //console.log('上拉加载更多');
       this.getHomeGoods(this.currentType)
       //修复图片加载不能下拉的bug
       this.$refs.scroll.scroll.refresh()
-    },
+    },*/
     /*网络请求相关的方法*/
     getHomeMultidata() {
       getHomeMultidata().then(res => {
@@ -121,7 +128,7 @@ export default {
         //console.log(res);
         this.goods[type].list.push(...res.data.list)
         this.goods[type].page += 1
-        this.$refs.scroll.finishPullUp()
+        //this.$refs.scroll.finishPullUp()
       })
     }
   }

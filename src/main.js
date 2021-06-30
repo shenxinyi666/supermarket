@@ -14,6 +14,8 @@ Vue.config.productionTip = false
 //git remote add origin https://github.com/shenxinyi666/supermarket.git
 //git push -u origin master
 
+Vue.prototype.$bus = new Vue()
+
 new Vue({
   render: h => h(App),
   router
