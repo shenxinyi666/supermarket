@@ -44,6 +44,7 @@ import BackTop from "components/content/backTop/BackTop";
 
 import {getHomeMultidata, getHomeGoods} from "network/home";
 import {debounce} from "common/utils";
+import {itemListenerMixin} from "common/mixin";
 
 export default {
   name: "Home",
@@ -57,6 +58,8 @@ export default {
     Scroll,
     BackTop
   },
+  //混入封装的
+  mixins: [itemListenerMixin],
   //存储请求过来的数据到result变量
   data() {
     return {
@@ -72,7 +75,12 @@ export default {
       isShowBackTop: false,
       tabOffsetTop: 0,
       isTabFixed: false,
-      saveY: 0
+      saveY: 0,
+      //方法一：
+      homeImgListener: null,
+      //方法二：
+      //在mixin.js定义
+      //itemImgListener: null
     }
   },
   computed: {
@@ -90,27 +98,43 @@ export default {
     this.getHomeGoods('sell')
   },
   mounted() {
-    //1.监听item中图片加载完成
-    const refresh = debounce(this.$refs.scroll.refresh, 50)
-    this.$bus.$on('itemImageLoad', () => {
+    //方法一：
+    //1.监听home中图片加载完成
+    /*const refresh = debounce(this.$refs.scroll.refresh, 50)
+    this.$bus.$on('homeItemImageLoad', () => {
       refresh()
       //console.log('---');
       //this.$refs.scroll.refresh()
-    })
+    })*/
+
+    //方法二：
+    //1.监听home中图片加载完成
+    /*const refresh = debounce(this.$refs.scroll.refresh, 50)
+    //2.对监听的事件进行保存
+    this.itemImgListener=()=>{
+      refresh()
+    }
+    this.$bus.$on('itemImgLoad',this.itemImgListener )*/
+
+    //方法三：
+    //用mixins混入封装方法二中与Detail相同的代码到common/mixin.js
   },
   destroyed() {
-    console.log('home destroyed');
+    //console.log('home destroyed');
   },
   activated() {
     //console.log('activated');
     this.$refs.scroll.scrollTo(0, this.saveY, 0)
     //解决多次切换出现bug问题
-    this.$refs.scroll.refresh()
+    //this.$refs.scroll.refresh()
   },
   deactivated() {
     //console.log('deactivated');
+    //1.保存Y值
     this.saveY = this.$refs.scroll.getScrollY()
     //console.log(this.saveY);
+    //2.取消全局事件的监听(GoodsListItem中方法二)
+    this.$bus.$off('itemImgLoad', this.homeImgListener)
   },
   methods: {
     /*事件监听相关的方法*/
