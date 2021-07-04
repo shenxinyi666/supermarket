@@ -44,7 +44,7 @@ import BackTop from "components/content/backTop/BackTop";
 
 import {getHomeMultidata, getHomeGoods} from "network/home";
 import {debounce} from "common/utils";
-import {itemListenerMixin} from "common/mixin";
+import {itemListenerMixin, backTopMixin} from "common/mixin";
 
 export default {
   name: "Home",
@@ -55,11 +55,12 @@ export default {
     HomeSwiper,
     RecommendView,
     FeatureView,
-    Scroll,
-    BackTop
+    Scroll
+    //在mixin注册
+    //BackTop
   },
   //混入封装的
-  mixins: [itemListenerMixin],
+  mixins: [itemListenerMixin,backTopMixin],
   //存储请求过来的数据到result变量
   data() {
     return {
@@ -72,7 +73,8 @@ export default {
         'sell': {page: 0, list: []}
       },
       currentType: 'pop',
-      isShowBackTop: false,
+      //在mixin.js定义
+      //isShowBackTop: false,
       tabOffsetTop: 0,
       isTabFixed: false,
       saveY: 0,
@@ -155,18 +157,25 @@ export default {
       this.$refs.tabControl1.currentIndex = index
       this.$refs.tabControl2.currentIndex = index
     },
-    backClick() {
+    //mixin混入封装
+    /*backClick() {
       //console.log('backClick');
       //this.$refs.scroll.scroll.scrollTo(0,0,500)
       this.$refs.scroll.scrollTo(0, 0)
-    },
+    },*/
     contentScroll(position) {
       //console.log(position);
       //1.判断BackTop是否显示
-      this.isShowBackTop = (-position.y) > 1000
+      //重新写一个方法是为了在mixin封装，因为mixin中不能抽取相同方法的部分代码
+      this.listenShowBackTop(position)
+      //this.isShowBackTop = (-position.y) > 1000
       //2.决定tabControl是否吸顶(position:fixed)
       this.isTabFixed = (-position.y) > this.tabOffsetTop
     },
+    //将此方法在mixin封装
+    /*listenShowBackTop(position){
+      this.isShowBackTop = (-position.y) > 1000
+    },*/
     loadMore() {
       //console.log('上拉加载更多');
       this.getHomeGoods(this.currentType)

@@ -3,7 +3,7 @@
     <detail-nav-bar
       class="detail-nav"
       @titleClick="titleClick"
-    ref="nav"></detail-nav-bar>
+      ref="nav"></detail-nav-bar>
     <scroll class="content"
             ref="scroll"
             :probe-type="3"
@@ -20,6 +20,10 @@
       <goods-list ref="recommend"
                   :goods="recommends"></goods-list>
     </scroll>
+    <detail-bottom-bar @addCart="addToCart"></detail-bottom-bar>
+    <!--.native是在我们需要监听一个组件的原生事件时使用-->
+    <back-top @click.native="backClick" v-show="isShowBackTop"></back-top>
+    <!--<toast :message="message" :show="isShow"></toast>-->
   </div>
 </template>
 
@@ -31,13 +35,18 @@ import DetailShopInfo from "./childComps/DetailShopInfo";
 import DetailGoodsInfo from "./childComps/DetailGoodsInfo";
 import DetailParamInfo from "./childComps/DetailParamInfo";
 import DetailCommentInfo from "./childComps/DetailCommentInfo";
+import DetailBottomBar from "./childComps/DetailBottomBar";
 
 import Scroll from "components/common/scroll/Scroll";
 import GoodsList from "components/content/goods/GoodsList";
+import BackTop from "components/content/backTop/BackTop";
 
 import {getDetail, Goods, Shop, GoodsParam, getRecommend} from "network/detail";
 import {debounce} from "common/utils";
-import {itemListenerMixin} from "common/mixin";
+import {itemListenerMixin, backTopMixin} from "common/mixin";
+import {mapActions} from 'vuex'
+
+import Toast from "components/common/toast/Toast";
 
 export default {
   name: "Detail",
@@ -49,11 +58,15 @@ export default {
     DetailGoodsInfo,
     DetailParamInfo,
     DetailCommentInfo,
+    DetailBottomBar,
+    Scroll,
     GoodsList,
-    Scroll
+    //在mixin注册
+    //BackTop,
+    //Toast
   },
   //混入封装的
-  mixins: [itemListenerMixin],
+  mixins: [itemListenerMixin, backTopMixin],
   data() {
     return {
       iid: null,
@@ -71,7 +84,11 @@ export default {
       //itemImgListener: null
       //DetailNavBar中title对应的Y值
       themeTopYs: [],
-      getThemeTopYs: null
+      getThemeTopYs: null,
+      //在mixin.js定义
+      //isShowBackTop: false
+      //message:'',
+      //isShow:false
     }
   },
   created() {
@@ -113,7 +130,9 @@ export default {
       this.themeTopYs.push(this.$refs.params.$el.offsetTop)
       this.themeTopYs.push(this.$refs.comment.$el.offsetTop)
       this.themeTopYs.push(this.$refs.recommend.$el.offsetTop)
-      console.log(this.themeTopYs);
+      //方法二中获取页面最大值
+      this.themeTopYs.push(Number.MAX_VALUE)
+      //console.log(this.themeTopYs);
     }, 50)
 
     //1.第一次获取值不对：this.$refs.params.$el压根没有渲染
@@ -183,11 +202,12 @@ export default {
     titleClick(index) {
       //console.log(index);
       //注意：滚动的y值都是’-‘
-      this.$refs.scroll.scrollTo(0, -this.themeTopYs[index], 100)
+      this.$refs.scroll.scrollTo(0, -this.themeTopYs[index], 50)
     },
     contentScroll(position) {
       //console.log(position);
-      //1.获取Y值
+      //方法一：
+      /*//1.获取Y值
       const positionY = -position.y
       //2.positionY和主题中值进行对比
       //[0,a,b,c]
@@ -197,6 +217,7 @@ export default {
       //positionY[c,+∞)，index=3
       let length = this.themeTopYs.length
       for (let i = 0; i < length; i++) {
+        /!*this.currentIndex !== i:防止赋值的过程过于频繁*!/
         if (this.currentIndex !== i && ((i < length - 1 && positionY >= this.themeTopYs[i] && positionY < this.themeTopYs[i + 1]) ||
           (i === length - 1 && positionY >= this.themeTopYs[i]))) {
           //console.log(i);
@@ -204,9 +225,76 @@ export default {
           console.log(this.currentIndex);
           this.$refs.nav.currentIndex=this.currentIndex
         }
+      }*/
+
+      //方法二：
+      //1.获取Y值
+      const positionY = -position.y
+      //2.positionY和主题中值进行对比
+      //[0,a,b,c,Number.MAX_VALUE]
+      //console.log(Number.MAX_VALUE);
+      //positionY在[0,a)，index=0
+      //positionY在[a,b)，index=1
+      //positionY在[b,c)，index=2
+      //positionY[c,Number.MAX_VALUE)，index=3
+      let length = this.themeTopYs.length
+      /*注意：这种方法下面i < length-1,防止数组[i+1]越界*/
+      for (let i = 0; i < length - 1; i++) {
+        /*this.currentIndex !== i:防止赋值的过程过于频繁*/
+        if (this.currentIndex !== i && (positionY >= this.themeTopYs[i] && positionY < this.themeTopYs[i + 1])) {
+          //console.log(i);
+          this.currentIndex = i;
+          //console.log(this.currentIndex);
+          this.$refs.nav.currentIndex = this.currentIndex
+        }
       }
+
+      //3.是否显示回到顶部
+      //重新写一个方法是为了在mixin封装，因为mixin中不能抽取相同方法的部分代码
+      this.listenShowBackTop(position)
+      //this.isShowBackTop = (-position.y) > 1000
+    },
+    ...mapActions(['addCart']),
+    addToCart() {
+      //console.log('addCart');
+      //1.获取购物车需要展示的信息
+      const product = {}
+      product.image = this.topImages[0]
+      product.title = this.goods.title
+      product.des = this.goods.desc
+      product.price = this.goods.realPrice
+      product.iid = this.iid
+      //2.将商品添加到购物车
+      //this.$store.cartList.push(product)
+      //mutations
+      //this.$store.commit('addCart',product)
+      //actions
+      /*this.$store.dispatch('addCart',product).then(res=>{
+        console.log(res);
+      })*/
+      //通过mapActions映射
+      this.addCart(product).then(res=>{
+        //console.log(res);
+        /*this.isShow=true;
+        this.message=res;
+        setTimeout(()=>{
+          this.isShow=false;
+          this.message='';
+        },2000)*/
+        this.$toast.show(res,2000)
+      })
     }
+    //mixin混入封装
+    /*backClick() {
+      //console.log('backClick');
+      //this.$refs.scroll.scroll.scrollTo(0,0,500)
+      this.$refs.scroll.scrollTo(0, 0)
+    }*/
   },
+  //将此方法在mixin封装
+  /*listenShowBackTop(position){
+    this.isShowBackTop = (-position.y) > 1000
+  },*/
   //错误代码：这里不能在deactivated取消，
   // 因为keep-alive用来缓存组件,避免多次加载相应的组件,减少性能消耗
   //Detail组件中没有使用keep-alive,所以的deactivated不能调用
@@ -232,7 +320,7 @@ export default {
 }
 
 .content {
-  height: calc(100% - 44px);
+  height: calc(100% - 44px - 60px);
 }
 
 .detail-nav {

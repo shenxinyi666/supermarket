@@ -4,7 +4,7 @@ import App from '../App.vue'
 
 const Home = () => import('../views/home/Home')
 const Category = () => import('../views/category/Category')
-const ShopCart = () => import('../views/shopCart/ShopCart')
+const Cart = () => import('../views/cart/Cart')
 const Profile = () => import('../views/profile/Profile')
 const Detail = () => import('../views/detail/Detail')
 
@@ -27,8 +27,8 @@ const routes = [
     component: Category
   },
   {
-    path: "/shopCart",
-    component: ShopCart
+    path: "/cart",
+    component: Cart
   },
   {
     path: "/profile",
@@ -44,5 +44,5 @@ const router = new VueRouter({
   mode:'history'
 })
 
-//3.导入router
+//3.导出router
 export default router
